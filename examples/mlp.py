@@ -460,8 +460,8 @@ def load_fashion_mnist() -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray
     Returns:
         Tupla contendo (X_train, y_train, X_test, y_test)
     """
-    train_df = pd.read_csv("data/fashion-mnist_train.csv")
-    test_df = pd.read_csv("data/fashion-mnist_test.csv")
+    train_df = pd.read_csv("data/fashion_train.csv")
+    test_df = pd.read_csv("data/fashion_test.csv")
 
     # Separar features e labels
     y_train = train_df["label"].values
