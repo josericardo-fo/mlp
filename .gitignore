@@ -1,0 +1,5 @@
+.conda
+.vscode
+
+data
+__pycache__
