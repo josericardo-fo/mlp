@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class Losses:
+class Loss:
     """Class to encapsulate various loss functions."""
 
     @staticmethod

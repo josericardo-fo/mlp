@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from src.utils.activations import Activation
+from src.utils.activation import Activation
 
 
 class TestActivations(unittest.TestCase):
