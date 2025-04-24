@@ -1,10 +1,12 @@
-from typing import Dict, List, Optional, Tuple
-import numpy as np
 import pickle
-import time
+from typing import Dict, List, Optional, Tuple
+
+import numpy as np
+
 from src.utils.activations import Activation
 from src.utils.losses import Losses
 from src.utils.metrics import Metrics
+
 
 class MLP:
     def __init__(
@@ -29,7 +31,9 @@ class MLP:
         self.momentum = momentum
         self.use_bias = use_bias
         self.activation_name = activation
-        self.activation_func, self.activation_derivative = Activation.get_activation_and_derivative(activation)
+        self.activation_func, self.activation_derivative = (
+            Activation.get_activation_and_derivative(activation)
+        )
         self.loss_function = Losses()
         self.metrics = Metrics()
 
@@ -44,14 +48,26 @@ class MLP:
 
     def _initialize_weights(self, method: str) -> None:
         if method == "random":
-            self.weights_input_hidden = np.random.randn(self.input_size, self.hidden_size) * 0.01
-            self.weights_hidden_output = np.random.randn(self.hidden_size, self.output_size) * 0.01
+            self.weights_input_hidden = (
+                np.random.randn(self.input_size, self.hidden_size) * 0.01
+            )
+            self.weights_hidden_output = (
+                np.random.randn(self.hidden_size, self.output_size) * 0.01
+            )
         elif method == "xavier":
-            self.weights_input_hidden = np.random.randn(self.input_size, self.hidden_size) * np.sqrt(1.0 / self.input_size)
-            self.weights_hidden_output = np.random.randn(self.hidden_size, self.output_size) * np.sqrt(1.0 / self.hidden_size)
+            self.weights_input_hidden = np.random.randn(
+                self.input_size, self.hidden_size
+            ) * np.sqrt(1.0 / self.input_size)
+            self.weights_hidden_output = np.random.randn(
+                self.hidden_size, self.output_size
+            ) * np.sqrt(1.0 / self.hidden_size)
         elif method == "he":
-            self.weights_input_hidden = np.random.randn(self.input_size, self.hidden_size) * np.sqrt(2.0 / self.input_size)
-            self.weights_hidden_output = np.random.randn(self.hidden_size, self.output_size) * np.sqrt(2.0 / self.hidden_size)
+            self.weights_input_hidden = np.random.randn(
+                self.input_size, self.hidden_size
+            ) * np.sqrt(2.0 / self.input_size)
+            self.weights_hidden_output = np.random.randn(
+                self.hidden_size, self.output_size
+            ) * np.sqrt(2.0 / self.hidden_size)
         else:
             raise ValueError(f"Unsupported weight initialization method: {method}")
 
@@ -60,8 +76,12 @@ class MLP:
             self.bias_output = np.zeros((1, self.output_size))
 
     def _initialize_momentum_terms(self) -> None:
-        self.prev_delta_weights_input_hidden = np.zeros((self.input_size, self.hidden_size))
-        self.prev_delta_weights_hidden_output = np.zeros((self.hidden_size, self.output_size))
+        self.prev_delta_weights_input_hidden = np.zeros(
+            (self.input_size, self.hidden_size)
+        )
+        self.prev_delta_weights_hidden_output = np.zeros(
+            (self.hidden_size, self.output_size)
+        )
         self.prev_delta_bias_hidden = np.zeros((1, self.hidden_size))
         self.prev_delta_bias_output = np.zeros((1, self.output_size))
 
@@ -74,19 +94,29 @@ class MLP:
         self.final_input = np.dot(self.hidden_output, self.weights_hidden_output)
         if self.use_bias:
             self.final_input += self.bias_output
-        self.final_output = Activation.softmax(self.final_input)  # Usando a função softmax diretamente
+        self.final_output = Activation.softmax(
+            self.final_input
+        )  # Usando a função softmax diretamente
 
         return self.final_output
 
     def backward(self, X: np.ndarray, y: np.ndarray, output: np.ndarray) -> None:
         output_error = output - y
-        hidden_error = np.dot(output_error, self.weights_hidden_output.T) * self.activation_derivative(self.hidden_input)
+        hidden_error = np.dot(
+            output_error, self.weights_hidden_output.T
+        ) * self.activation_derivative(self.hidden_input)
 
         delta_weights_hidden_output = np.dot(self.hidden_output.T, output_error)
         delta_weights_input_hidden = np.dot(X.T, hidden_error)
 
-        self.weights_hidden_output -= (self.learning_rate * delta_weights_hidden_output + self.momentum * self.prev_delta_weights_hidden_output)
-        self.weights_input_hidden -= (self.learning_rate * delta_weights_input_hidden + self.momentum * self.prev_delta_weights_input_hidden)
+        self.weights_hidden_output -= (
+            self.learning_rate * delta_weights_hidden_output
+            + self.momentum * self.prev_delta_weights_hidden_output
+        )
+        self.weights_input_hidden -= (
+            self.learning_rate * delta_weights_input_hidden
+            + self.momentum * self.prev_delta_weights_input_hidden
+        )
 
         self.prev_delta_weights_hidden_output = delta_weights_hidden_output
         self.prev_delta_weights_input_hidden = delta_weights_input_hidden
@@ -95,8 +125,14 @@ class MLP:
             delta_bias_output = np.sum(output_error, axis=0, keepdims=True)
             delta_bias_hidden = np.sum(hidden_error, axis=0, keepdims=True)
 
-            self.bias_output -= (self.learning_rate * delta_bias_output + self.momentum * self.prev_delta_bias_output)
-            self.bias_hidden -= (self.learning_rate * delta_bias_hidden + self.momentum * self.prev_delta_bias_hidden)
+            self.bias_output -= (
+                self.learning_rate * delta_bias_output
+                + self.momentum * self.prev_delta_bias_output
+            )
+            self.bias_hidden -= (
+                self.learning_rate * delta_bias_hidden
+                + self.momentum * self.prev_delta_bias_hidden
+            )
 
             self.prev_delta_bias_output = delta_bias_output
             self.prev_delta_bias_hidden = delta_bias_hidden
@@ -109,12 +145,20 @@ class MLP:
         accuracy = self.metrics.calculate_accuracy(y, output)
 
         return loss, accuracy
-    
+
     def predict(self, X: np.ndarray) -> np.ndarray:
         """Realiza a predição com o modelo treinado."""
         return self.forward(X)
 
-    def train(self, X: np.ndarray, y: np.ndarray, epochs: int, batch_size: int = 32, validation_data: Optional[Tuple[np.ndarray, np.ndarray]] = None, verbose: bool = True) -> Dict[str, List[float]]:
+    def train(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        epochs: int,
+        batch_size: int = 32,
+        validation_data: Optional[Tuple[np.ndarray, np.ndarray]] = None,
+        verbose: bool = True,
+    ) -> Dict[str, List[float]]:
         n_samples = X.shape[0]
         n_batches = int(np.ceil(n_samples / batch_size))
 
@@ -152,7 +196,9 @@ class MLP:
                 self.training_history["val_accuracy"].append(val_acc)
 
             if verbose:
-                print(f"Epoch {epoch + 1}/{epochs}, Loss: {epoch_loss:.4f}, Acc: {epoch_acc:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}")
+                print(
+                    f"Epoch {epoch + 1}/{epochs}, Loss: {epoch_loss:.4f}, Acc: {epoch_acc:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}"
+                )
 
         return self.training_history
 
@@ -171,7 +217,9 @@ class MLP:
             "weights_hidden_output": self.weights_hidden_output,
             "bias_hidden": self.bias_hidden if self.use_bias else None,
             "bias_output": self.bias_output if self.use_bias else None,
-            "activation": self.activation_name if hasattr(self, 'activation_name') else "sigmoid",  # Valor padrão
+            "activation": self.activation_name
+            if hasattr(self, "activation_name")
+            else "sigmoid",  # Valor padrão
             "learning_rate": self.learning_rate,
             "momentum": self.momentum,
             "use_bias": self.use_bias,

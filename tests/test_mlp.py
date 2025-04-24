@@ -1,14 +1,20 @@
 import unittest
+
 import numpy as np
+
 from src.models.mlp import MLP
 
-class TestMLP(unittest.TestCase):
 
+class TestMLP(unittest.TestCase):
     def setUp(self):
         self.input_size = 784
         self.hidden_size = 128
         self.output_size = 10
-        self.mlp = MLP(input_size=self.input_size, hidden_size=self.hidden_size, output_size=self.output_size)
+        self.mlp = MLP(
+            input_size=self.input_size,
+            hidden_size=self.hidden_size,
+            output_size=self.output_size,
+        )
 
     def test_initialization(self):
         self.assertEqual(self.mlp.input_size, self.input_size)
@@ -43,5 +49,6 @@ class TestMLP(unittest.TestCase):
         accuracy = self.mlp.calculate_accuracy(y_true, y_pred)
         self.assertEqual(accuracy, 1.0)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

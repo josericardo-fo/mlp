@@ -1,15 +1,26 @@
 from typing import Dict, List, Optional, Tuple
+
 import numpy as np
+
 from src.models.mlp import MLP
 
+
 class Trainer:
-    def __init__(self, model: MLP, batch_size: int = 32, epochs: int = 10, validation_data: Optional[Tuple[np.ndarray, np.ndarray]] = None):
+    def __init__(
+        self,
+        model: MLP,
+        batch_size: int = 32,
+        epochs: int = 10,
+        validation_data: Optional[Tuple[np.ndarray, np.ndarray]] = None,
+    ):
         self.model = model
         self.batch_size = batch_size
         self.epochs = epochs
         self.validation_data = validation_data
 
-    def train(self, X: np.ndarray, y: np.ndarray, verbose: bool = True) -> Dict[str, List[float]]:
+    def train(
+        self, X: np.ndarray, y: np.ndarray, verbose: bool = True
+    ) -> Dict[str, List[float]]:
         n_samples = X.shape[0]
         n_batches = int(np.ceil(n_samples / self.batch_size))
         training_history = {
@@ -50,8 +61,14 @@ class Trainer:
                 training_history["val_accuracy"].append(val_acc)
 
             if verbose:
-                val_str = f", Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}" if self.validation_data is not None else ""
-                print(f"Epoch {epoch + 1}/{self.epochs}, Loss: {epoch_loss:.4f}, Acc: {epoch_acc:.4f}{val_str}")
+                val_str = (
+                    f", Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}"
+                    if self.validation_data is not None
+                    else ""
+                )
+                print(
+                    f"Epoch {epoch + 1}/{self.epochs}, Loss: {epoch_loss:.4f}, Acc: {epoch_acc:.4f}{val_str}"
+                )
 
         return training_history
 
@@ -66,6 +83,6 @@ class Trainer:
         self.model.save(filepath)
 
     @classmethod
-    def load_model(cls, filepath: str) -> 'Trainer':
+    def load_model(cls, filepath: str) -> "Trainer":
         model = MLP.load(filepath)
         return cls(model)
