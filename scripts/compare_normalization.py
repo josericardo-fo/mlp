@@ -1,4 +1,3 @@
-# compare_batch_vs_full.py
 import os, sys
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,10 +8,25 @@ from src.models.mlp import MLP
 from src.trainers.trainer import Trainer
 from src.utils.metrics import Metrics
 
+def load_custom_normalized_data(file_path, normalization='minmax'):
+    import pandas as pd
+    df = pd.read_csv(file_path)
+    y = df["label"].values
+    X = df.drop("label", axis=1).values.astype(np.float32)
+    
+    if normalization == 'minmax':
+        X = X / 255.0
+    elif normalization == 'zscore':
+        X = (X - X.mean()) / X.std()
+    # else: no normalization
+    
+    y_onehot = np.zeros((y.size, 10))
+    y_onehot[np.arange(y.size), y] = 1
+    return X, y_onehot
 
-def run_experiment(batch_size: int, title: str):
-    x_train, y_train = DataLoader.load_fashion_mnist("src/data/fashion_train.csv")
-    x_test, y_test = DataLoader.load_fashion_mnist("src/data/fashion_test.csv")
+def run_experiment(norm_type, title):
+    x_train, y_train = load_custom_normalized_data("src/data/fashion_train.csv", normalization=norm_type)
+    x_test, y_test = load_custom_normalized_data("src/data/fashion_test.csv", normalization=norm_type)
 
     model = MLP(
         input_size=784,
@@ -25,23 +39,21 @@ def run_experiment(batch_size: int, title: str):
 
     trainer = Trainer(
         model=model,
-        batch_size=batch_size,
-        epochs=30,
+        batch_size=32,
+        epochs=20,
         validation_data=(x_test, y_test),
     )
 
+    print(f"Treinando com normalização: {title}")
     history = trainer.train(x_train, y_train)
     test_loss, test_acc = trainer.evaluate(x_test, y_test)
-
     print(f"{title} - Test Accuracy: {test_acc:.4f} | Test Loss: {test_loss:.4f}")
 
     return model, history, x_test, y_test, title
 
-
 def plot_results(histories, titles):
     plt.figure(figsize=(14, 5))
 
-    # Plot Loss
     plt.subplot(1, 2, 1)
     for hist, title in zip(histories, titles):
         plt.plot(hist["loss"], label=f"Loss - {title}")
@@ -51,7 +63,6 @@ def plot_results(histories, titles):
     plt.ylabel("Loss")
     plt.legend()
 
-    # Plot Acurácia
     plt.subplot(1, 2, 2)
     for hist, title in zip(histories, titles):
         plt.plot(hist["accuracy"], label=f"Train Acc - {title}")
@@ -62,10 +73,9 @@ def plot_results(histories, titles):
     plt.legend()
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    plt.savefig(f"batch_vs_full_{timestamp}.png")
+    plt.savefig(f"imgs/compare_normalization_{timestamp}.png")
     plt.show()
-
-
+    
 def plot_confusion_matrix(model, x_test, y_test, title):
     y_pred = model.predict(x_test)
     cm = Metrics.confusion_matrix(y_test, y_pred)
@@ -83,29 +93,26 @@ def plot_confusion_matrix(model, x_test, y_test, title):
     for i in range(cm.shape[0]):
         for j in range(cm.shape[1]):
             plt.text(
-                j,
-                i,
-                str(cm[i, j]),
-                ha="center",
-                va="center",
-                color="white" if cm[i, j] > thresh else "black",
+                j, i, str(cm[i, j]),
+                ha="center", va="center",
+                color="white" if cm[i, j] > thresh else "black"
             )
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     plt.savefig(f"imgs/confusion_matrix_{title.replace(' ', '_').lower()}_{timestamp}.png")
     plt.tight_layout()
     plt.show()
 
-
 if __name__ == "__main__":
-    # Experimento com mini-batches
-    model_mb, hist_mb, x_test_mb, y_test_mb, title_mb = run_experiment(32, "Mini-Batches (32)")
-    
-    # Experimento com batch completo
-    model_full, hist_full, x_test_full, y_test_full, title_full = run_experiment(60000, "Batch Completo")
+    norm_types = ['none', 'minmax', 'zscore']
+    titles = ['Sem Normalização', 'Normalização Min-Max [0,1]', 'Z-Score']
 
-    # Plotar comparação
-    plot_results([hist_mb, hist_full], [title_mb, title_full])
+    results = []
+    for norm, title in zip(norm_types, titles):
+        model, hist, x_test, y_test, label = run_experiment(norm, title)
+        results.append((model, hist, x_test, y_test, label))
 
-    # Matriz de confusão
-    plot_confusion_matrix(model_mb, x_test_mb, y_test_mb, title_mb)
-    plot_confusion_matrix(model_full, x_test_full, y_test_full, title_full)
+    plot_results([r[1] for r in results], [r[4] for r in results])
+
+    for model, _, x_test, y_test, label in results:
+        plot_confusion_matrix(model, x_test, y_test, label)
+
