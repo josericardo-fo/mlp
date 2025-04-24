@@ -97,6 +97,13 @@ class MLP:
         self.final_output = Activation.softmax(self.final_input)
         return self.final_output
 
+    def _clip_gradients(self, grads, max_norm):
+        norm = np.linalg.norm([np.linalg.norm(g) for g in grads])
+        if norm > max_norm:
+            scale = max_norm / (norm + 1e-6)
+            return [g * scale for g in grads]
+        return grads
+
     def backward(self, X: np.ndarray, y: np.ndarray, output: np.ndarray) -> None:
         output_error = output - y
         hidden_error = np.dot(
@@ -106,6 +113,28 @@ class MLP:
         delta_weights_hidden_output = np.dot(self.hidden_output.T, output_error)
         delta_weights_input_hidden = np.dot(X.T, hidden_error)
 
+        if self.use_bias:
+            delta_bias_output = np.sum(output_error, axis=0, keepdims=True)
+            delta_bias_hidden = np.sum(hidden_error, axis=0, keepdims=True)
+        else:
+            delta_bias_output = np.zeros_like(self.bias_output)
+            delta_bias_hidden = np.zeros_like(self.bias_hidden)
+
+        # 🔒 Clipping
+        grads = [
+            delta_weights_input_hidden,
+            delta_weights_hidden_output,
+            delta_bias_hidden,
+            delta_bias_output,
+        ]
+        (
+            delta_weights_input_hidden,
+            delta_weights_hidden_output,
+            delta_bias_hidden,
+            delta_bias_output,
+        ) = self._clip_gradients(grads, max_norm=5.0)
+
+        # 🔄 Atualização dos pesos e bias
         self.weights_hidden_output -= (
             self.learning_rate * delta_weights_hidden_output
             + self.momentum * self.prev_delta_weights_hidden_output
@@ -119,9 +148,6 @@ class MLP:
         self.prev_delta_weights_input_hidden = delta_weights_input_hidden
 
         if self.use_bias:
-            delta_bias_output = np.sum(output_error, axis=0, keepdims=True)
-            delta_bias_hidden = np.sum(hidden_error, axis=0, keepdims=True)
-
             self.bias_output -= (
                 self.learning_rate * delta_bias_output
                 + self.momentum * self.prev_delta_bias_output
@@ -130,9 +156,9 @@ class MLP:
                 self.learning_rate * delta_bias_hidden
                 + self.momentum * self.prev_delta_bias_hidden
             )
-
             self.prev_delta_bias_output = delta_bias_output
             self.prev_delta_bias_hidden = delta_bias_hidden
+
 
     def train_batch(self, X: np.ndarray, y: np.ndarray) -> Tuple[float, float]:
         output = self.forward(X)
