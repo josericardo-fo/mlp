@@ -21,10 +21,6 @@ def main():
     x_train, y_train = DataLoader.load_fashion_mnist('src/data/fashion_train.csv')
     x_test, y_test = DataLoader.load_fashion_mnist('src/data/fashion_test.csv')
     
-    # Obter funções de ativação
-    relu_func, relu_deriv = Activation.get_activation_and_derivative('relu')
-    softmax_func, softmax_deriv = Activation.get_activation_and_derivative('softmax')
-    
     # Criar modelo
     print("Inicializando modelo...")
     model = MLP(
