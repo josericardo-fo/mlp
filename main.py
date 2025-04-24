@@ -93,6 +93,8 @@ def main():
                     ha='center', va='center',
                     color='white' if cm[i, j] > thresh else 'black',
                     fontsize=12)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    plt.savefig(f'confusion_matrix_{timestamp}.png')
     plt.tight_layout()
     plt.show()
 
