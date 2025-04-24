@@ -80,8 +80,24 @@ def main():
     # Gerar e mostrar matriz de confusão
     y_pred = model.predict(x_test)
     cm = Metrics.confusion_matrix(y_test, y_pred)
-    print("Matriz de confusão:")
-    print(cm)
+    plt.figure(figsize=(8, 6))
+    plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    plt.title('Matriz de Confusão')
+    plt.colorbar()
+    tick_marks = np.arange(cm.shape[0])
+    plt.xticks(tick_marks, tick_marks)
+    plt.yticks(tick_marks, tick_marks)
+    plt.xlabel('Classe Predita')
+    plt.ylabel('Classe Real')
+    thresh = cm.max() / 2.
+    for i in range(cm.shape[0]):
+        for j in range(cm.shape[1]):
+            plt.text(j, i, str(cm[i, j]),
+                    ha='center', va='center',
+                    color='white' if cm[i, j] > thresh else 'black',
+                    fontsize=12)
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == "__main__":
     main()
