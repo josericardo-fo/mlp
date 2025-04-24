@@ -3,8 +3,8 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
-from src.utils.activations import Activation
-from src.utils.losses import Losses
+from src.utils.activation import Activation
+from src.utils.loss import Loss
 from src.utils.metrics import Metrics
 
 
@@ -34,7 +34,7 @@ class MLP:
         self.activation_func, self.activation_derivative = (
             Activation.get_activation_and_derivative(activation)
         )
-        self.loss_function = Losses()
+        self.loss_function = Loss()
         self.metrics = Metrics()
 
         self._initialize_weights(weight_init)
@@ -94,10 +94,7 @@ class MLP:
         self.final_input = np.dot(self.hidden_output, self.weights_hidden_output)
         if self.use_bias:
             self.final_input += self.bias_output
-        self.final_output = Activation.softmax(
-            self.final_input
-        )  # Usando a função softmax diretamente
-
+        self.final_output = Activation.softmax(self.final_input)
         return self.final_output
 
     def backward(self, X: np.ndarray, y: np.ndarray, output: np.ndarray) -> None:
