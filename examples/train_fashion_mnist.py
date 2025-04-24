@@ -1,7 +1,9 @@
-from src.data.data_loader import load_fashion_mnist
+import argparse, sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from src.data.data_loader import DataLoader
 from src.models.mlp import MLP
 from src.trainers.trainer import Trainer
-import argparse
+
 
 def main():
     parser = argparse.ArgumentParser(description="Train MLP on Fashion MNIST")
@@ -22,7 +24,8 @@ def main():
     args = parser.parse_args()
 
     print("Loading data...")
-    X_train, y_train, X_test, y_test = load_fashion_mnist()
+    X_train, y_train = DataLoader.load_fashion_mnist("src/data/fashion_train.csv")
+    X_test, y_test = DataLoader.load_fashion_mnist("src/data/fashion_test.csv")
 
     if args.validation_split > 0:
         val_size = int(X_train.shape[0] * args.validation_split)
@@ -47,10 +50,10 @@ def main():
         random_state=args.seed,
     )
 
-    trainer = Trainer(model=mlp)
+    trainer = Trainer(model=mlp, epochs=args.epochs, batch_size=args.batch_size, validation_data=validation_data)
 
     print(f"Starting training for {args.epochs} epochs with batch size {args.batch_size}...")
-    trainer.train(X_train, y_train, epochs=args.epochs, batch_size=args.batch_size, validation_data=validation_data)
+    trainer.train(X_train, y_train)
 
     test_loss, test_acc = trainer.evaluate(X_test, y_test)
     print(f"Test evaluation - Loss: {test_loss:.4f}, Accuracy: {test_acc:.4f}")
