@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class Losses:
     """Class to encapsulate various loss functions."""
 

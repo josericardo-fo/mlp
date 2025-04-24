@@ -1,3 +1,6 @@
+import numpy as np
+
+
 import unittest
 from src.utils.activations import Activations
 

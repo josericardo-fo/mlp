@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class Metrics:
     """Classe para calcular métricas de desempenho do modelo."""
 
