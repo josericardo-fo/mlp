@@ -57,8 +57,9 @@ class Trainer:
 
     def evaluate(self, X: np.ndarray, y: np.ndarray) -> Tuple[float, float]:
         predictions = self.model.predict(X)
-        loss = self.model.calculate_loss(y, predictions)
-        accuracy = self.model.calculate_accuracy(y, predictions)
+        # Usando os métodos que realmente existem na classe MLP
+        loss = self.model.loss_function.cross_entropy(y, predictions)
+        accuracy = self.model.metrics.calculate_accuracy(y, predictions)
         return loss, accuracy
 
     def save_model(self, filepath: str) -> None:

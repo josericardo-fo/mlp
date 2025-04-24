@@ -2,7 +2,7 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pickle
 import time
-from src.utils.activations import Activations
+from src.utils.activations import Activation
 from src.utils.losses import Losses
 from src.utils.metrics import Metrics
 
@@ -28,7 +28,8 @@ class MLP:
         self.learning_rate = learning_rate
         self.momentum = momentum
         self.use_bias = use_bias
-        self.activation = Activations(activation)
+        self.activation_name = activation
+        self.activation_func, self.activation_derivative = Activation.get_activation_and_derivative(activation)
         self.loss_function = Losses()
         self.metrics = Metrics()
 
@@ -68,18 +69,18 @@ class MLP:
         self.hidden_input = np.dot(X, self.weights_input_hidden)
         if self.use_bias:
             self.hidden_input += self.bias_hidden
-        self.hidden_output = self.activation.forward(self.hidden_input)
+        self.hidden_output = self.activation_func(self.hidden_input)
 
         self.final_input = np.dot(self.hidden_output, self.weights_hidden_output)
         if self.use_bias:
             self.final_input += self.bias_output
-        self.final_output = self.activation.softmax(self.final_input)
+        self.final_output = Activation.softmax(self.final_input)  # Usando a função softmax diretamente
 
         return self.final_output
 
     def backward(self, X: np.ndarray, y: np.ndarray, output: np.ndarray) -> None:
         output_error = output - y
-        hidden_error = np.dot(output_error, self.weights_hidden_output.T) * self.activation.derivative(self.hidden_input)
+        hidden_error = np.dot(output_error, self.weights_hidden_output.T) * self.activation_derivative(self.hidden_input)
 
         delta_weights_hidden_output = np.dot(self.hidden_output.T, output_error)
         delta_weights_input_hidden = np.dot(X.T, hidden_error)
@@ -105,9 +106,13 @@ class MLP:
         self.backward(X, y, output)
 
         loss = self.loss_function.cross_entropy(y, output)
-        accuracy = self.metrics.accuracy(y, output)
+        accuracy = self.metrics.calculate_accuracy(y, output)
 
         return loss, accuracy
+    
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """Realiza a predição com o modelo treinado."""
+        return self.forward(X)
 
     def train(self, X: np.ndarray, y: np.ndarray, epochs: int, batch_size: int = 32, validation_data: Optional[Tuple[np.ndarray, np.ndarray]] = None, verbose: bool = True) -> Dict[str, List[float]]:
         n_samples = X.shape[0]
@@ -152,9 +157,9 @@ class MLP:
         return self.training_history
 
     def evaluate(self, X: np.ndarray, y: np.ndarray) -> Tuple[float, float]:
-        predictions = self.forward(X)
+        predictions = self.predict(X)  # Use self.predict em vez de self.model.predict
         loss = self.loss_function.cross_entropy(y, predictions)
-        accuracy = self.metrics.accuracy(y, predictions)
+        accuracy = self.metrics.calculate_accuracy(y, predictions)
         return loss, accuracy
 
     def save(self, filepath: str) -> None:
@@ -166,7 +171,7 @@ class MLP:
             "weights_hidden_output": self.weights_hidden_output,
             "bias_hidden": self.bias_hidden if self.use_bias else None,
             "bias_output": self.bias_output if self.use_bias else None,
-            "activation": self.activation.name,
+            "activation": self.activation_name if hasattr(self, 'activation_name') else "sigmoid",  # Valor padrão
             "learning_rate": self.learning_rate,
             "momentum": self.momentum,
             "use_bias": self.use_bias,
