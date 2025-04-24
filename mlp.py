@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-
+import torch
 
 class MLP:
     def __init__(self, activation="relu", learning_rate=0.01, epochs=1000):
@@ -64,3 +64,29 @@ class MLP:
         output = np.dot(self.a1, self.weights[1]) + self.biases[1]
         probs = self._softmax(output)
         return probs
+
+    def _cross_entropy_loss(self, probs, y_true):
+        epsilon = 1e-15  # Detalhe de implementação para evitar log de 0 (náo existe)
+        y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
+        loss = -np.sum(y_true * np.log(y_pred), axis=1).mean()
+        return loss
+
+    def _backward_pass(self, x, y_true):
+        probs = self._foward_pass(x)
+        loss = self._cross_entropy_loss(probs, y_true)
+
+        # REVISAR DAQUI PARA BAIXO
+        delta_2 = probs - y_true  
+        grad_weights2 = np.dot(self.a1.T, delta_2) 
+        grad_biases2 = np.sum(delta_2, axis=0, keepdims=True) 
+
+        delta_1 = np.dot(delta_2, self.weights[1].T) * (self.a1 > 0) 
+        grad_weights1 = np.dot(x.T, delta_1)  
+        grad_biases1 = np.sum(delta_1, axis=0, keepdims=True)  
+
+        self.weights[1] -= self.learning_rate * grad_weights2
+        self.biases[1] -= self.learning_rate * grad_biases2
+        self.weights[0] -= self.learning_rate * grad_weights1
+        self.biases[0] -= self.learning_rate * grad_biases1
+
+        return loss
