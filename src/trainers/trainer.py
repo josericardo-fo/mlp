@@ -1,9 +1,6 @@
 from typing import Dict, List, Optional, Tuple
-
 import numpy as np
-
 from src.models.mlp import MLP
-
 
 class Trainer:
     def __init__(
@@ -74,7 +71,6 @@ class Trainer:
 
     def evaluate(self, X: np.ndarray, y: np.ndarray) -> Tuple[float, float]:
         predictions = self.model.predict(X)
-        # Usando os métodos que realmente existem na classe MLP
         loss = self.model.loss_function.cross_entropy(y, predictions)
         accuracy = self.model.metrics.calculate_accuracy(y, predictions)
         return loss, accuracy

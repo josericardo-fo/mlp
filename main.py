@@ -49,6 +49,7 @@ def main():
     print("Avaliando modelo...")
     test_loss, test_acc = trainer.evaluate(x_test, y_test)
     print(f"Acurácia final no conjunto de teste: {test_acc:.2f}%")
+    print(f"Perda final no conjunto de teste: {test_loss:.4f}")
     
     plt.figure(figsize=(12, 5))
 
