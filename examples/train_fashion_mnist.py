@@ -78,21 +78,8 @@ def main():
 
     trainer = Trainer(model=mlp, epochs=args.epochs, batch_size=args.batch_size, validation_data=validation_data)
 
-<<<<<<< HEAD
     print(f"Starting training for {args.epochs} epochs with batch size {args.batch_size}...")
     trainer.train(X_train, y_train)
-=======
-    print(
-        f"Starting training for {args.epochs} epochs with batch size {args.batch_size}..."
-    )
-    trainer.train(
-        X_train,
-        y_train,
-        epochs=args.epochs,
-        batch_size=args.batch_size,
-        validation_data=validation_data,
-    )
->>>>>>> 88dce2e08446c5140f8cfb11640ab547accca468
 
     test_loss, test_acc = trainer.evaluate(X_test, y_test)
     print(f"Test evaluation - Loss: {test_loss:.4f}, Accuracy: {test_acc:.4f}")
