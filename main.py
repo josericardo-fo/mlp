@@ -75,7 +75,7 @@ def main():
 
     # Salvar figura
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    plt.savefig(f"results_{timestamp}.png")
+    plt.savefig(f"imgs/results_{timestamp}.png")
     plt.show()
 
     # Gerar e mostrar matriz de confusão
@@ -103,7 +103,7 @@ def main():
                 fontsize=12,
             )
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    plt.savefig(f"confusion_matrix_{timestamp}.png")
+    plt.savefig(f"imgs/confusion_matrix_{timestamp}.png")
     plt.tight_layout()
     plt.show()
 
