@@ -15,5 +15,6 @@ class Loss:
         Returns:
             The cross-entropy loss value.
         """
-        y_pred = np.clip(y_pred, 1e-15, 1 - 1e-15)  # Avoid log(0)
-        return -np.mean(np.sum(y_true * np.log(y_pred), axis=1))
+        eps = 1e-12
+        y_clp = np.clip(y_pred, eps, 1.0 - eps)
+        return -np.mean(np.sum(y_true * np.log(y_clp), axis=1))
