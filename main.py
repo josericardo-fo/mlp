@@ -32,6 +32,7 @@ def main():
         momentum=0.0,
         use_bias=True,
         weight_init="he",
+        optimizer = "adam"
     )
 
     # Configurar e treinar modelo

@@ -16,6 +16,14 @@ class MLP:
         output_size: int,
         activation: str = "sigmoid",
         learning_rate: float = 0.01,
+
+        optimizer: str = "adam",  
+        beta1: float = 0.9,       
+        beta2: float = 0.999,     
+        epsilon: float = 1e-8, 
+
+        decay_rate = 1e-6,
+
         momentum: float = 0.0,
         use_bias: bool = True,
         weight_init: str = "random",
@@ -28,7 +36,12 @@ class MLP:
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.learning_rate = learning_rate
+        self.optimizer = optimizer.lower()
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
         self.momentum = momentum
+        self.decay_rate = decay_rate
         self.use_bias = use_bias
         self.activation_name = activation
         self.activation_func, self.activation_derivative = (
@@ -38,6 +51,7 @@ class MLP:
         self.metrics = Metrics()
 
         self._initialize_weights(weight_init)
+        self._initialize_optimizer_states()
         self._initialize_momentum_terms()
         self.training_history = {
             "loss": [],
@@ -85,6 +99,31 @@ class MLP:
         self.prev_delta_bias_hidden = np.zeros((1, self.hidden_size))
         self.prev_delta_bias_output = np.zeros((1, self.output_size))
 
+
+    def _initialize_optimizer_states(self) -> None:
+        self.v_w_ih = np.zeros_like(self.weights_input_hidden)
+        self.v_w_ho = np.zeros_like(self.weights_hidden_output)
+        self.v_b_h = np.zeros_like(self.bias_hidden) if self.use_bias else None
+        self.v_b_o = np.zeros_like(self.bias_output) if self.use_bias else None
+
+        self.m_w_ih = np.zeros_like(self.weights_input_hidden)
+        self.vv_w_ih = np.zeros_like(self.weights_input_hidden)
+        self.m_w_ho = np.zeros_like(self.weights_hidden_output)
+        self.vv_w_ho = np.zeros_like(self.weights_hidden_output)
+
+        if self.use_bias:
+            self.m_b_h = np.zeros_like(self.bias_hidden)
+            self.vv_b_h = np.zeros_like(self.bias_hidden)
+            self.m_b_o = np.zeros_like(self.bias_output)
+            self.vv_b_o = np.zeros_like(self.bias_output)
+
+        self.t = 0  
+
+    def learning_rate_decay(self):
+        if self.decay_rate > 0:
+            self.learning_rate = self.learning_rate / (1.0 + self.decay_rate * np.log1p(self.t))
+    
+
     def forward(self, X: np.ndarray) -> np.ndarray:
         self.hidden_input = np.dot(X, self.weights_input_hidden)
         if self.use_bias:
@@ -98,41 +137,71 @@ class MLP:
         return self.final_output
 
     def backward(self, X: np.ndarray, y: np.ndarray, output: np.ndarray) -> None:
+        self.t += 1
+
+        self.learning_rate_decay()
+
         output_error = output - y
-        hidden_error = np.dot(
-            output_error, self.weights_hidden_output.T
-        ) * self.activation_derivative(self.hidden_input)
+        hidden_error = np.dot(output_error, self.weights_hidden_output.T) * self.activation_derivative(self.hidden_input)
 
-        delta_weights_hidden_output = np.dot(self.hidden_output.T, output_error)
-        delta_weights_input_hidden = np.dot(X.T, hidden_error)
+        dw_ho = np.dot(self.hidden_output.T, output_error)
+        dw_ih = np.dot(X.T, hidden_error)
 
-        self.weights_hidden_output -= (
-            self.learning_rate * delta_weights_hidden_output
-            + self.momentum * self.prev_delta_weights_hidden_output
-        )
-        self.weights_input_hidden -= (
-            self.learning_rate * delta_weights_input_hidden
-            + self.momentum * self.prev_delta_weights_input_hidden
-        )
+        if self.optimizer == "sgd":
+            self.weights_hidden_output -= self.learning_rate * dw_ho
+            self.weights_input_hidden -= self.learning_rate * dw_ih
 
-        self.prev_delta_weights_hidden_output = delta_weights_hidden_output
-        self.prev_delta_weights_input_hidden = delta_weights_input_hidden
+            if self.use_bias:
+                db_o = np.sum(output_error, axis=0, keepdims=True)
+                db_h = np.sum(hidden_error, axis=0, keepdims=True)
+                self.bias_output -= self.learning_rate * db_o
+                self.bias_hidden -= self.learning_rate * db_h
 
-        if self.use_bias:
-            delta_bias_output = np.sum(output_error, axis=0, keepdims=True)
-            delta_bias_hidden = np.sum(hidden_error, axis=0, keepdims=True)
+        elif self.optimizer == "momentum":
+            self.v_w_ho = self.momentum * self.v_w_ho + dw_ho
+            self.v_w_ih = self.momentum * self.v_w_ih + dw_ih
+            self.weights_hidden_output -= self.learning_rate * self.v_w_ho
+            self.weights_input_hidden -= self.learning_rate * self.v_w_ih
 
-            self.bias_output -= (
-                self.learning_rate * delta_bias_output
-                + self.momentum * self.prev_delta_bias_output
-            )
-            self.bias_hidden -= (
-                self.learning_rate * delta_bias_hidden
-                + self.momentum * self.prev_delta_bias_hidden
-            )
+            if self.use_bias:
+                db_o = np.sum(output_error, axis=0, keepdims=True)
+                db_h = np.sum(hidden_error, axis=0, keepdims=True)
+                self.v_b_o = self.momentum * self.v_b_o + db_o
+                self.v_b_h = self.momentum * self.v_b_h + db_h
+                self.bias_output -= self.learning_rate * self.v_b_o
+                self.bias_hidden -= self.learning_rate * self.v_b_h
 
-            self.prev_delta_bias_output = delta_bias_output
-            self.prev_delta_bias_hidden = delta_bias_hidden
+        elif self.optimizer == "adam":
+            self.m_w_ho = self.beta1 * self.m_w_ho + (1 - self.beta1) * dw_ho
+            self.vv_w_ho = self.beta2 * self.vv_w_ho + (1 - self.beta2) * (dw_ho ** 2)
+            m_w_ho_corr = self.m_w_ho / (1 - self.beta1 ** self.t)
+            vv_w_ho_corr = self.vv_w_ho / (1 - self.beta2 ** self.t)
+            self.weights_hidden_output -= self.learning_rate * m_w_ho_corr / (np.sqrt(vv_w_ho_corr) + self.epsilon)
+
+            self.m_w_ih = self.beta1 * self.m_w_ih + (1 - self.beta1) * dw_ih
+            self.vv_w_ih = self.beta2 * self.vv_w_ih + (1 - self.beta2) * (dw_ih ** 2)
+            m_w_ih_corr = self.m_w_ih / (1 - self.beta1 ** self.t)
+            vv_w_ih_corr = self.vv_w_ih / (1 - self.beta2 ** self.t)
+            self.weights_input_hidden -= self.learning_rate * m_w_ih_corr / (np.sqrt(vv_w_ih_corr) + self.epsilon)
+
+            if self.use_bias:
+                db_o = np.sum(output_error, axis=0, keepdims=True)
+                db_h = np.sum(hidden_error, axis=0, keepdims=True)
+
+                self.m_b_o = self.beta1 * self.m_b_o + (1 - self.beta1) * db_o
+                self.vv_b_o = self.beta2 * self.vv_b_o + (1 - self.beta2) * (db_o ** 2)
+                m_b_o_corr = self.m_b_o / (1 - self.beta1 ** self.t)
+                vv_b_o_corr = self.vv_b_o / (1 - self.beta2 ** self.t)
+                self.bias_output -= self.learning_rate * m_b_o_corr / (np.sqrt(vv_b_o_corr) + self.epsilon)
+
+                self.m_b_h = self.beta1 * self.m_b_h + (1 - self.beta1) * db_h
+                self.vv_b_h = self.beta2 * self.vv_b_h + (1 - self.beta2) * (db_h ** 2)
+                m_b_h_corr = self.m_b_h / (1 - self.beta1 ** self.t)
+                vv_b_h_corr = self.vv_b_h / (1 - self.beta2 ** self.t)
+                self.bias_hidden -= self.learning_rate * m_b_h_corr / (np.sqrt(vv_b_h_corr) + self.epsilon)
+
+            else:
+                raise ValueError(f"Otimizador: {self.optimizer} nao suportado")
 
     def train_batch(self, X: np.ndarray, y: np.ndarray) -> Tuple[float, float]:
         output = self.forward(X)
