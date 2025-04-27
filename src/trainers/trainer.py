@@ -64,7 +64,7 @@ class Trainer:
                     else ""
                 )
                 print(
-                    f"Epoch {epoch + 1}/{self.epochs}, Loss: {epoch_loss:.4f}, Acc: {epoch_acc:.4f}{val_str}"
+                    f"Epoch {epoch + 1}/{self.epochs}, Loss: {epoch_loss:.4f}, Acc: {epoch_acc:.4f}{val_str}, lr: {self.model.learning_rate}"
                 )
 
         return training_history
