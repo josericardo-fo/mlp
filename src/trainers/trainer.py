@@ -9,11 +9,13 @@ class Trainer:
         batch_size: int = 32,
         epochs: int = 10,
         validation_data: Optional[Tuple[np.ndarray, np.ndarray]] = None,
+        shuffle: bool = True,
     ):
         self.model = model
         self.batch_size = batch_size
         self.epochs = epochs
         self.validation_data = validation_data
+        self.shuffle = shuffle
 
     def train(
         self, X: np.ndarray, y: np.ndarray, verbose: bool = True
@@ -28,9 +30,13 @@ class Trainer:
         }
 
         for epoch in range(self.epochs):
-            indices = np.random.permutation(n_samples)
-            X_shuffled = X[indices]
-            y_shuffled = y[indices]
+            if self.shuffle:
+                indices = np.random.permutation(n_samples)
+                X_epoch = X[indices]
+                y_epoch = y[indices]
+            else:
+                X_epoch = X
+                y_epoch = y
 
             epoch_loss = 0
             epoch_acc = 0
@@ -39,8 +45,8 @@ class Trainer:
                 start_idx = batch * self.batch_size
                 end_idx = min((batch + 1) * self.batch_size, n_samples)
 
-                X_batch = X_shuffled[start_idx:end_idx]
-                y_batch = y_shuffled[start_idx:end_idx]
+                X_batch = X_epoch[start_idx:end_idx]
+                y_batch = y_epoch[start_idx:end_idx]
 
                 batch_loss, batch_acc = self.model.train_batch(X_batch, y_batch)
                 epoch_loss += batch_loss * (end_idx - start_idx)

@@ -8,7 +8,7 @@ class DataLoader:
     """Class for loading and preprocessing datasets."""
 
     @staticmethod
-    def load_fashion_mnist(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
+    def load_fashion_mnist(file_path: str, normalize=True) -> Tuple[np.ndarray, np.ndarray]:
         """
         Load the Fashion MNIST dataset from a specific file.
 
@@ -22,7 +22,9 @@ class DataLoader:
 
         # Separate features and labels
         y = df["label"].values
-        X = df.drop("label", axis=1).values / 255.0  # Normalize the data
+        X = df.drop("label", axis=1).values
+        if normalize:
+            X = X / 255.0
 
         # Convert to one-hot encoding
         y_onehot = np.zeros((y.size, 10))

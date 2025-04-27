@@ -136,58 +136,84 @@ class MLP:
         self.final_output = Activation.softmax(self.final_input)
         return self.final_output
 
+    def _clip_gradients(self, grads, max_norm):
+        norm = np.linalg.norm([np.linalg.norm(g) for g in grads])
+        if norm > max_norm:
+            scale = max_norm / (norm + 1e-6)
+            return [g * scale for g in grads]
+        return tuple(grads)
+
+
     def backward(self, X: np.ndarray, y: np.ndarray, output: np.ndarray) -> None:
-        self.t += 1
+        self.t += 1  # Incrementa contador de iterações (importante para Adam)
+        if self.optimizer in ["sgd", "momentum"]:
+            self.learning_rate_decay() # Aplica decaimento do learning rate, se existir
 
-        self.learning_rate_decay()
-
+        # Calcula erro da saída e erro escondido
         output_error = output - y
         hidden_error = np.dot(output_error, self.weights_hidden_output.T) * self.activation_derivative(self.hidden_input)
 
+        # Calcula gradientes brutos
         dw_ho = np.dot(self.hidden_output.T, output_error)
         dw_ih = np.dot(X.T, hidden_error)
 
+        if self.use_bias:
+            db_o = np.sum(output_error, axis=0, keepdims=True)
+            db_h = np.sum(hidden_error, axis=0, keepdims=True)
+        else:
+            db_o, db_h = None, None
+
+        # Agrupa gradientes para possível clipping
+        grads = [dw_ih, dw_ho]
+        if self.use_bias:
+            grads.extend([db_h, db_o])
+
+        # Clipping dos gradientes, se necessário
+        dw_ih, dw_ho, db_h, db_o = self._clip_gradients(grads, max_norm=5.0)
+
+        # Atualiza pesos conforme o otimizador
         if self.optimizer == "sgd":
+            # SGD puro
             self.weights_hidden_output -= self.learning_rate * dw_ho
             self.weights_input_hidden -= self.learning_rate * dw_ih
-
             if self.use_bias:
-                db_o = np.sum(output_error, axis=0, keepdims=True)
-                db_h = np.sum(hidden_error, axis=0, keepdims=True)
                 self.bias_output -= self.learning_rate * db_o
                 self.bias_hidden -= self.learning_rate * db_h
 
         elif self.optimizer == "momentum":
+            # SGD com Momentum
             self.v_w_ho = self.momentum * self.v_w_ho + dw_ho
             self.v_w_ih = self.momentum * self.v_w_ih + dw_ih
+
             self.weights_hidden_output -= self.learning_rate * self.v_w_ho
             self.weights_input_hidden -= self.learning_rate * self.v_w_ih
 
             if self.use_bias:
-                db_o = np.sum(output_error, axis=0, keepdims=True)
-                db_h = np.sum(hidden_error, axis=0, keepdims=True)
                 self.v_b_o = self.momentum * self.v_b_o + db_o
                 self.v_b_h = self.momentum * self.v_b_h + db_h
                 self.bias_output -= self.learning_rate * self.v_b_o
                 self.bias_hidden -= self.learning_rate * self.v_b_h
 
         elif self.optimizer == "adam":
+            # Adam optimizer (momentum adaptativo)
+            # Para pesos hidden-output
             self.m_w_ho = self.beta1 * self.m_w_ho + (1 - self.beta1) * dw_ho
             self.vv_w_ho = self.beta2 * self.vv_w_ho + (1 - self.beta2) * (dw_ho ** 2)
             m_w_ho_corr = self.m_w_ho / (1 - self.beta1 ** self.t)
             vv_w_ho_corr = self.vv_w_ho / (1 - self.beta2 ** self.t)
+
             self.weights_hidden_output -= self.learning_rate * m_w_ho_corr / (np.sqrt(vv_w_ho_corr) + self.epsilon)
 
+            # Para pesos input-hidden
             self.m_w_ih = self.beta1 * self.m_w_ih + (1 - self.beta1) * dw_ih
             self.vv_w_ih = self.beta2 * self.vv_w_ih + (1 - self.beta2) * (dw_ih ** 2)
             m_w_ih_corr = self.m_w_ih / (1 - self.beta1 ** self.t)
             vv_w_ih_corr = self.vv_w_ih / (1 - self.beta2 ** self.t)
+
             self.weights_input_hidden -= self.learning_rate * m_w_ih_corr / (np.sqrt(vv_w_ih_corr) + self.epsilon)
 
+            # Atualiza biases se existirem
             if self.use_bias:
-                db_o = np.sum(output_error, axis=0, keepdims=True)
-                db_h = np.sum(hidden_error, axis=0, keepdims=True)
-
                 self.m_b_o = self.beta1 * self.m_b_o + (1 - self.beta1) * db_o
                 self.vv_b_o = self.beta2 * self.vv_b_o + (1 - self.beta2) * (db_o ** 2)
                 m_b_o_corr = self.m_b_o / (1 - self.beta1 ** self.t)
@@ -200,8 +226,8 @@ class MLP:
                 vv_b_h_corr = self.vv_b_h / (1 - self.beta2 ** self.t)
                 self.bias_hidden -= self.learning_rate * m_b_h_corr / (np.sqrt(vv_b_h_corr) + self.epsilon)
 
-            else:
-                raise ValueError(f"Otimizador: {self.optimizer} nao suportado")
+        else:
+            raise ValueError(f"Otimizador '{self.optimizer}' não suportado.")
 
     def train_batch(self, X: np.ndarray, y: np.ndarray) -> Tuple[float, float]:
         output = self.forward(X)
@@ -288,6 +314,11 @@ class MLP:
             else "sigmoid",  # Valor padrão
             "learning_rate": self.learning_rate,
             "momentum": self.momentum,
+            "optimizer": self.optimizer,
+            "beta1": self.beta1,
+            "beta2": self.beta2,
+            "epsilon": self.epsilon,
+            "decay_rate": self.decay_rate,
             "use_bias": self.use_bias,
             "training_history": self.training_history,
         }
