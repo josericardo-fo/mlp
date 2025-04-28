@@ -99,7 +99,7 @@ def main():
     plt.figure(figsize=(12, 5))
 
     plt.subplot(1, 2, 1)
-    plt.plot(history["loss"], label="Treino")  # Modificado de 'train_loss' para 'loss'
+    plt.plot(history["loss"], label="Treino")
     plt.plot(history["val_loss"], label="Validação")
     plt.title("Loss durante o treinamento")
     plt.xlabel("Época")
