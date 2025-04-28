@@ -52,7 +52,7 @@ class MLP:
         self.l1_lambda = l1_lambda
         self.l2_lambda = l2_lambda
         self.dropout_rate = dropout_rate
-        self.training_mode = False
+        self.training_mode = True
         self.activation_name = activation
         self.activation_func, self.activation_derivative = (
             Activation.get_activation_and_derivative(activation)
