@@ -32,7 +32,10 @@ def main():
         momentum=0.0,
         use_bias=True,
         weight_init="he",
-        optimizer = "adam"
+        optimizer = "adam",
+        l1_lambda=0.0001,
+        l2_lambda=0.001,
+        dropout_rate=0.2,
     )
 
     # Configurar e treinar modelo
