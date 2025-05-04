@@ -1,6 +1,9 @@
 from typing import Dict, List, Optional, Tuple
+
 import numpy as np
+
 from src.models.mlp import MLP
+
 
 class Trainer:
     def __init__(

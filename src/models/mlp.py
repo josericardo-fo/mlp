@@ -16,23 +16,17 @@ class MLP:
         output_size: int,
         activation: str = "sigmoid",
         learning_rate: float = 0.01,
-
-        optimizer: str = "adam",  
-        beta1: float = 0.9,       
-        beta2: float = 0.999,     
-        epsilon: float = 1e-8, 
-
-        decay_rate = 1e-6,
-
+        optimizer: str = "adam",
+        beta1: float = 0.9,
+        beta2: float = 0.999,
+        epsilon: float = 1e-8,
+        decay_rate=1e-6,
         momentum: float = 0.0,
         use_bias: bool = True,
         weight_init: str = "random",
-
         l1_lambda: float = 0.0,
         l2_lambda: float = 0.0,
-        
         dropout_rate: float = 0.0,
-
         random_state: Optional[int] = None,
     ):
         if random_state is not None:
@@ -109,7 +103,6 @@ class MLP:
         self.prev_delta_bias_hidden = np.zeros((1, self.hidden_size))
         self.prev_delta_bias_output = np.zeros((1, self.output_size))
 
-
     def _initialize_optimizer_states(self) -> None:
         self.v_w_ih = np.zeros_like(self.weights_input_hidden)
         self.v_w_ho = np.zeros_like(self.weights_hidden_output)
@@ -127,12 +120,13 @@ class MLP:
             self.m_b_o = np.zeros_like(self.bias_output)
             self.vv_b_o = np.zeros_like(self.bias_output)
 
-        self.t = 0  
+        self.t = 0
 
     def learning_rate_decay(self):
         if self.decay_rate > 0:
-            self.learning_rate = self.learning_rate / (1.0 + self.decay_rate * np.log1p(self.t))
-    
+            self.learning_rate = self.learning_rate / (
+                1.0 + self.decay_rate * np.log1p(self.t)
+            )
 
     def forward(self, X: np.ndarray) -> np.ndarray:
         self.hidden_input = np.dot(X, self.weights_input_hidden)
@@ -159,15 +153,16 @@ class MLP:
             return [g * scale for g in grads]
         return tuple(grads)
 
-
     def backward(self, X: np.ndarray, y: np.ndarray, output: np.ndarray) -> None:
         self.t += 1  # Incrementa contador de iterações (importante para Adam)
         if self.optimizer in ["sgd", "momentum"]:
-            self.learning_rate_decay() # Aplica decaimento do learning rate, se existir
+            self.learning_rate_decay()  # Aplica decaimento do learning rate, se existir
 
         # Calcula erro da saída e erro escondido
         output_error = output - y
-        hidden_error = np.dot(output_error, self.weights_hidden_output.T) * self.activation_derivative(self.hidden_input)
+        hidden_error = np.dot(
+            output_error, self.weights_hidden_output.T
+        ) * self.activation_derivative(self.hidden_input)
 
         # Calcula gradientes brutos
         dw_ho = np.dot(self.hidden_output.T, output_error)
@@ -177,8 +172,8 @@ class MLP:
         if self.l1_lambda > 0:
             dw_ho += self.l1_lambda * np.sign(self.weights_hidden_output)
             dw_ih += self.l1_lambda * np.sign(self.weights_input_hidden)
-    
-    # Adiciona regularização L2 (aplicada apenas ao gradiente)
+
+        # Adiciona regularização L2 (aplicada apenas ao gradiente)
         if self.l2_lambda > 0:
             dw_ho += self.l2_lambda * self.weights_hidden_output
             dw_ih += self.l2_lambda * self.weights_input_hidden
@@ -224,33 +219,49 @@ class MLP:
             # Adam optimizer (momentum adaptativo)
             # Para pesos hidden-output
             self.m_w_ho = self.beta1 * self.m_w_ho + (1 - self.beta1) * dw_ho
-            self.vv_w_ho = self.beta2 * self.vv_w_ho + (1 - self.beta2) * (dw_ho ** 2)
-            m_w_ho_corr = self.m_w_ho / (1 - self.beta1 ** self.t)
-            vv_w_ho_corr = self.vv_w_ho / (1 - self.beta2 ** self.t)
+            self.vv_w_ho = self.beta2 * self.vv_w_ho + (1 - self.beta2) * (dw_ho**2)
+            m_w_ho_corr = self.m_w_ho / (1 - self.beta1**self.t)
+            vv_w_ho_corr = self.vv_w_ho / (1 - self.beta2**self.t)
 
-            self.weights_hidden_output -= self.learning_rate * m_w_ho_corr / (np.sqrt(vv_w_ho_corr) + self.epsilon)
+            self.weights_hidden_output -= (
+                self.learning_rate
+                * m_w_ho_corr
+                / (np.sqrt(vv_w_ho_corr) + self.epsilon)
+            )
 
             # Para pesos input-hidden
             self.m_w_ih = self.beta1 * self.m_w_ih + (1 - self.beta1) * dw_ih
-            self.vv_w_ih = self.beta2 * self.vv_w_ih + (1 - self.beta2) * (dw_ih ** 2)
-            m_w_ih_corr = self.m_w_ih / (1 - self.beta1 ** self.t)
-            vv_w_ih_corr = self.vv_w_ih / (1 - self.beta2 ** self.t)
+            self.vv_w_ih = self.beta2 * self.vv_w_ih + (1 - self.beta2) * (dw_ih**2)
+            m_w_ih_corr = self.m_w_ih / (1 - self.beta1**self.t)
+            vv_w_ih_corr = self.vv_w_ih / (1 - self.beta2**self.t)
 
-            self.weights_input_hidden -= self.learning_rate * m_w_ih_corr / (np.sqrt(vv_w_ih_corr) + self.epsilon)
+            self.weights_input_hidden -= (
+                self.learning_rate
+                * m_w_ih_corr
+                / (np.sqrt(vv_w_ih_corr) + self.epsilon)
+            )
 
             # Atualiza biases se existirem
             if self.use_bias:
                 self.m_b_o = self.beta1 * self.m_b_o + (1 - self.beta1) * db_o
-                self.vv_b_o = self.beta2 * self.vv_b_o + (1 - self.beta2) * (db_o ** 2)
-                m_b_o_corr = self.m_b_o / (1 - self.beta1 ** self.t)
-                vv_b_o_corr = self.vv_b_o / (1 - self.beta2 ** self.t)
-                self.bias_output -= self.learning_rate * m_b_o_corr / (np.sqrt(vv_b_o_corr) + self.epsilon)
+                self.vv_b_o = self.beta2 * self.vv_b_o + (1 - self.beta2) * (db_o**2)
+                m_b_o_corr = self.m_b_o / (1 - self.beta1**self.t)
+                vv_b_o_corr = self.vv_b_o / (1 - self.beta2**self.t)
+                self.bias_output -= (
+                    self.learning_rate
+                    * m_b_o_corr
+                    / (np.sqrt(vv_b_o_corr) + self.epsilon)
+                )
 
                 self.m_b_h = self.beta1 * self.m_b_h + (1 - self.beta1) * db_h
-                self.vv_b_h = self.beta2 * self.vv_b_h + (1 - self.beta2) * (db_h ** 2)
-                m_b_h_corr = self.m_b_h / (1 - self.beta1 ** self.t)
-                vv_b_h_corr = self.vv_b_h / (1 - self.beta2 ** self.t)
-                self.bias_hidden -= self.learning_rate * m_b_h_corr / (np.sqrt(vv_b_h_corr) + self.epsilon)
+                self.vv_b_h = self.beta2 * self.vv_b_h + (1 - self.beta2) * (db_h**2)
+                m_b_h_corr = self.m_b_h / (1 - self.beta1**self.t)
+                vv_b_h_corr = self.vv_b_h / (1 - self.beta2**self.t)
+                self.bias_hidden -= (
+                    self.learning_rate
+                    * m_b_h_corr
+                    / (np.sqrt(vv_b_h_corr) + self.epsilon)
+                )
 
         else:
             raise ValueError(f"Otimizador '{self.optimizer}' não suportado.")
@@ -263,17 +274,20 @@ class MLP:
 
         if self.l1_lambda > 0:
             l1_reg = self.l1_lambda * (
-            np.sum(np.abs(self.weights_input_hidden)) + 
-            np.sum(np.abs(self.weights_hidden_output))
-        )
+                np.sum(np.abs(self.weights_input_hidden))
+                + np.sum(np.abs(self.weights_hidden_output))
+            )
         loss += l1_reg
 
-
         if self.l2_lambda > 0:
-            l2_reg = self.l2_lambda * 0.5 * (
-            np.sum(np.square(self.weights_input_hidden)) + 
-            np.sum(np.square(self.weights_hidden_output))
-        )
+            l2_reg = (
+                self.l2_lambda
+                * 0.5
+                * (
+                    np.sum(np.square(self.weights_input_hidden))
+                    + np.sum(np.square(self.weights_hidden_output))
+                )
+            )
         loss += l2_reg
 
         accuracy = self.metrics.calculate_accuracy(y, output)
@@ -284,7 +298,7 @@ class MLP:
         """Realiza a predição com o modelo treinado."""
         self.eval_mode()
         return self.forward(X)
-    
+
     def train_mode(self):
         """Coloca o modelo em modo de treinamento."""
         self.training_mode = True
@@ -346,26 +360,30 @@ class MLP:
         return self.training_history
 
     def evaluate(self, X: np.ndarray, y: np.ndarray) -> Tuple[float, float]:
-    # Make sure dropout is disabled for evaluation
+        # Make sure dropout is disabled for evaluation
         self.eval_mode()
         predictions = self.forward(X)
         loss = self.loss_function.cross_entropy(y, predictions)
-    
-    # Add regularization to validation loss as well for consistent comparison
+
+        # Add regularization to validation loss as well for consistent comparison
         if self.l1_lambda > 0:
             l1_reg = self.l1_lambda * (
-                np.sum(np.abs(self.weights_input_hidden)) + 
-                np.sum(np.abs(self.weights_hidden_output))
+                np.sum(np.abs(self.weights_input_hidden))
+                + np.sum(np.abs(self.weights_hidden_output))
             )
         loss += l1_reg
 
         if self.l2_lambda > 0:
-            l2_reg = self.l2_lambda * 0.5 * (
-                np.sum(np.square(self.weights_input_hidden)) + 
-                np.sum(np.square(self.weights_hidden_output))
+            l2_reg = (
+                self.l2_lambda
+                * 0.5
+                * (
+                    np.sum(np.square(self.weights_input_hidden))
+                    + np.sum(np.square(self.weights_hidden_output))
+                )
             )
         loss += l2_reg
-        
+
         accuracy = self.metrics.calculate_accuracy(y, predictions)
         return loss, accuracy
 

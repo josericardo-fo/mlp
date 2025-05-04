@@ -8,7 +8,9 @@ class DataLoader:
     """Class for loading and preprocessing datasets."""
 
     @staticmethod
-    def load_fashion_mnist(file_path: str, normalize=True) -> Tuple[np.ndarray, np.ndarray]:
+    def load_fashion_mnist(
+        file_path: str, normalize=True
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Load the Fashion MNIST dataset from a specific file.
 
