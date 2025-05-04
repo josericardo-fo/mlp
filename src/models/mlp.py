@@ -27,6 +27,12 @@ class MLP:
         momentum: float = 0.0,
         use_bias: bool = True,
         weight_init: str = "random",
+
+        l1_lambda: float = 0.0,
+        l2_lambda: float = 0.0,
+        
+        dropout_rate: float = 0.0,
+
         random_state: Optional[int] = None,
     ):
         if random_state is not None:
@@ -43,6 +49,10 @@ class MLP:
         self.momentum = momentum
         self.decay_rate = decay_rate
         self.use_bias = use_bias
+        self.l1_lambda = l1_lambda
+        self.l2_lambda = l2_lambda
+        self.dropout_rate = dropout_rate
+        self.training_mode = True
         self.activation_name = activation
         self.activation_func, self.activation_derivative = (
             Activation.get_activation_and_derivative(activation)
@@ -130,6 +140,12 @@ class MLP:
             self.hidden_input += self.bias_hidden
         self.hidden_output = self.activation_func(self.hidden_input)
 
+        if self.training_mode and self.dropout_rate > 0:
+            self.dropout_mask = np.random.binomial(
+                1, 1 - self.dropout_rate, size=self.hidden_output.shape
+            )
+            self.hidden_output *= self.dropout_mask
+
         self.final_input = np.dot(self.hidden_output, self.weights_hidden_output)
         if self.use_bias:
             self.final_input += self.bias_output
@@ -156,6 +172,16 @@ class MLP:
         # Calcula gradientes brutos
         dw_ho = np.dot(self.hidden_output.T, output_error)
         dw_ih = np.dot(X.T, hidden_error)
+
+        # Adiciona regularização L1 (aplicada apenas ao gradiente)
+        if self.l1_lambda > 0:
+            dw_ho += self.l1_lambda * np.sign(self.weights_hidden_output)
+            dw_ih += self.l1_lambda * np.sign(self.weights_input_hidden)
+    
+    # Adiciona regularização L2 (aplicada apenas ao gradiente)
+        if self.l2_lambda > 0:
+            dw_ho += self.l2_lambda * self.weights_hidden_output
+            dw_ih += self.l2_lambda * self.weights_input_hidden
 
         if self.use_bias:
             db_o = np.sum(output_error, axis=0, keepdims=True)
@@ -234,13 +260,38 @@ class MLP:
         self.backward(X, y, output)
 
         loss = self.loss_function.cross_entropy(y, output)
+
+        if self.l1_lambda > 0:
+            l1_reg = self.l1_lambda * (
+            np.sum(np.abs(self.weights_input_hidden)) + 
+            np.sum(np.abs(self.weights_hidden_output))
+        )
+        loss += l1_reg
+
+
+        if self.l2_lambda > 0:
+            l2_reg = self.l2_lambda * 0.5 * (
+            np.sum(np.square(self.weights_input_hidden)) + 
+            np.sum(np.square(self.weights_hidden_output))
+        )
+        loss += l2_reg
+
         accuracy = self.metrics.calculate_accuracy(y, output)
 
         return loss, accuracy
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         """Realiza a predição com o modelo treinado."""
+        self.eval_mode()
         return self.forward(X)
+    
+    def train_mode(self):
+        """Coloca o modelo em modo de treinamento."""
+        self.training_mode = True
+
+    def eval_mode(self):
+        """Coloca o modelo em modo de avaliação."""
+        self.training_mode = False
 
     def train(
         self,
@@ -295,8 +346,26 @@ class MLP:
         return self.training_history
 
     def evaluate(self, X: np.ndarray, y: np.ndarray) -> Tuple[float, float]:
-        predictions = self.predict(X)  # Use self.predict em vez de self.model.predict
+    # Make sure dropout is disabled for evaluation
+        self.eval_mode()
+        predictions = self.forward(X)
         loss = self.loss_function.cross_entropy(y, predictions)
+    
+    # Add regularization to validation loss as well for consistent comparison
+        if self.l1_lambda > 0:
+            l1_reg = self.l1_lambda * (
+                np.sum(np.abs(self.weights_input_hidden)) + 
+                np.sum(np.abs(self.weights_hidden_output))
+            )
+        loss += l1_reg
+
+        if self.l2_lambda > 0:
+            l2_reg = self.l2_lambda * 0.5 * (
+                np.sum(np.square(self.weights_input_hidden)) + 
+                np.sum(np.square(self.weights_hidden_output))
+            )
+        loss += l2_reg
+        
         accuracy = self.metrics.calculate_accuracy(y, predictions)
         return loss, accuracy
 
