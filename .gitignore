@@ -1,7 +1,7 @@
 .conda
 .vscode
-
 *.csv
 __pycache__/
 *.py[cod]
+.venv
 model.pkl
