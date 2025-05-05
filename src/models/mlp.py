@@ -24,8 +24,8 @@ class MLP:
         momentum: float = 0.0,
         use_bias: bool = True,
         weight_init: str = "random",
-        l1_lambda: float = 0.0,
-        l2_lambda: float = 0.0,
+        l1_lambda: float = 0.00001,
+        l2_lambda: float = 0.00001,
         dropout_rate: float = 0.0,
         random_state: Optional[int] = None,
     ):
