@@ -8,20 +8,6 @@
 
 Este projeto implementa uma rede neural do tipo Multilayer Perceptron (MLP) para classificação de imagens usando o dataset Fashion MNIST. A implementação é feita do zero usando apenas NumPy, sem frameworks de deep learning.
 
-## Estrutura do Projeto
-
-```text
-mlp/
-├── main.py                  # Script principal para treinamento e avaliação
-├── src/
-│   ├── data/                # Módulos para carregamento e processamento de dados
-│   ├── models/              # Implementação do modelo MLP
-│   ├── trainers/            # Rotinas de treinamento
-│   └── utils/               # Funções utilitárias (métricas, etc.)
-├── results_*.png            # Gráficos de treinamento gerados
-└── confusion_matrix_*.png   # Matrizes de confusão geradas
-```
-
 ## Uso
 
 Execute o script principal com:
