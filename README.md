@@ -43,6 +43,6 @@ Parâmetros:
 
 O treinamento gera automaticamente gráficos de:
 
-- Curva de perda (treino vs. validação)
-- Curva de acurácia (treino vs. validação)
+- Curva de perda
+- Curva de acurácia
 - Matriz de confusão
