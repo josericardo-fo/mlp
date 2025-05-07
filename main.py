@@ -12,6 +12,35 @@ from src.models.mlp import MLP
 from src.trainers.trainer import Trainer
 from src.utils.metrics import Metrics
 
+def normalize_data(X_train, X_test, method='z-score'):
+    """
+    Normalize input data using the specified method.
+    
+    Parameters:
+    -----------
+    X_train : np.ndarray
+        Training data to be normalized
+    X_test : np.ndarray
+        Test data to be normalized
+    method : str
+        Normalization method: 'min-max' or 'z-score'
+        
+    Returns:
+    --------
+    tuple: (normalized X_train, normalized X_test)
+    """
+    if method == 'min-max':
+        X_train_norm = X_train / 255.0
+        X_test_norm = X_test / 255.0
+    elif method == 'z-score':
+        mean = np.mean(X_train, axis=0)
+        std = np.std(X_train, axis=0)
+        std = np.where(std == 0, 1, std)  
+        X_train_norm = (X_train - mean) / std
+        X_test_norm = (X_test - mean) / std
+    else:
+        raise ValueError("Método de normalização inválido. Use 'min-max' ou 'z-score'.")
+    return X_train_norm, X_test_norm        
 
 def main():
     print("Iniciando treinamento do MLP em Fashion MNIST...")
@@ -20,6 +49,11 @@ def main():
     print("Carregando dados...")
     x_train, y_train = DataLoader.load_fashion_mnist("src/data/fashion_train.csv")
     x_test, y_test = DataLoader.load_fashion_mnist("src/data/fashion_test.csv")
+
+    # Normalizar dados
+    print("Normalizando dados de entrada...")
+    normalization_method = 'z-score'  # ou 'z-score'
+    x_train, x_test = normalize_data(x_train, x_test, method=normalization_method)
 
     # Criar modelo
     print("Inicializando modelo...")
